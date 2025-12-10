@@ -1,0 +1,573 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Estudio Comparativo: Modelos de Clustering</title>
+    <style>
+        :root {
+            --bg-color: #f4f7f6;
+            --text-color: #2c3e50;
+            --card-bg: #ffffff;
+            --kmeans-color: #3498db;      /* Azul */
+            --hierarchical-color: #9b59b6; /* Morado */
+            --dbscan-color: #e67e22;       /* Naranja */
+        }
+
+        body {
+            font-family: 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+            background-color: var(--bg-color);
+            color: var(--text-color);
+            margin: 0;
+            padding: 40px 20px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            user-select: none; /* Evita seleccionar texto al mantener click */
+        }
+
+        /* --- HEADER --- */
+        header {
+            text-align: center;
+            margin-bottom: 50px;
+            max-width: 800px;
+        }
+        h1 {
+            font-size: 3rem;
+            margin: 0;
+            color: #34495e;
+            letter-spacing: -1px;
+        }
+        p.subtitle {
+            font-size: 1.2rem;
+            color: #7f8c8d;
+            margin-top: 10px;
+        }
+        .instruction {
+            background: #fff3cd;
+            color: #856404;
+            padding: 10px 20px;
+            border-radius: 50px;
+            font-weight: bold;
+            display: inline-block;
+            margin-top: 20px;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+            animation: pulse 2s infinite;
+        }
+        @keyframes pulse {
+            0% { transform: scale(1); }
+            50% { transform: scale(1.05); }
+            100% { transform: scale(1); }
+        }
+
+        /* --- CONTENEDOR DE TARJETAS --- */
+        .container {
+            display: flex;
+            flex-wrap: wrap;
+            justify-content: center;
+            gap: 40px;
+            max-width: 1400px;
+            margin-bottom: 60px;
+        }
+
+        .card {
+            background: var(--card-bg);
+            border-radius: 20px;
+            box-shadow: 0 15px 35px rgba(0,0,0,0.1);
+            width: 360px;
+            padding: 30px;
+            display: flex;
+            flex-direction: column;
+            position: relative;
+            transition: transform 0.3s ease, box-shadow 0.3s ease;
+            border-top: 6px solid #ccc;
+        }
+
+        .card:hover {
+            transform: translateY(-10px);
+            box-shadow: 0 20px 40px rgba(0,0,0,0.15);
+        }
+
+        /* Header de la Tarjeta */
+        .card h2 {
+            margin-top: 0;
+            font-size: 1.8rem;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        .tag {
+            font-size: 0.75rem;
+            padding: 5px 10px;
+            border-radius: 6px;
+            color: white;
+            font-weight: 800;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        /* Área Visual (Demo) */
+        .visual-demo {
+            height: 220px;
+            background: #f8f9fa;
+            border-radius: 15px;
+            margin: 20px 0;
+            position: relative;
+            border: 2px solid #eef2f3;
+            overflow: hidden;
+        }
+        
+        canvas { display: block; width: 100%; height: 100%; }
+
+        /* Controles (Botón y Barra) */
+        .control-area { margin-bottom: 20px; }
+        
+        .progress-bg {
+            height: 8px;
+            background: #eef2f3;
+            border-radius: 4px;
+            margin-bottom: 15px;
+            overflow: hidden;
+        }
+        .progress-fill {
+            height: 100%;
+            width: 0%;
+            transition: width 0.1s linear;
+        }
+
+        .action-btn {
+            background: #2c3e50;
+            color: white;
+            border: none;
+            padding: 12px;
+            border-radius: 10px;
+            font-weight: bold;
+            cursor: pointer;
+            width: 100%;
+            font-size: 1rem;
+            outline: none;
+            box-shadow: 0 4px 0 rgba(0,0,0,0.2);
+            transition: all 0.1s;
+            text-transform: uppercase;
+        }
+        .action-btn:active {
+            transform: translateY(4px);
+            box-shadow: none;
+        }
+
+        /* Contenido Didáctico */
+        .info-content p {
+            font-size: 0.95rem;
+            line-height: 1.6;
+            color: #555;
+            margin-bottom: 15px;
+        }
+        .verdict {
+            display: block;
+            text-align: center;
+            font-weight: bold;
+            background: #f1f2f6;
+            color: #2c3e50;
+            padding: 10px;
+            border-radius: 8px;
+            font-size: 0.9rem;
+        }
+
+        /* --- ESTILOS ESPECÍFICOS POR MODELO --- */
+
+        /* 1. K-MEDIAS */
+        .card-km { border-color: var(--kmeans-color); }
+        .card-km h2 { color: var(--kmeans-color); }
+        .tag-km { background: var(--kmeans-color); }
+        .btn-km, .prog-km { background: var(--kmeans-color); }
+        
+        .km-centroid {
+            width: 24px; height: 24px;
+            border: 3px solid #e74c3c; /* Rojo para contraste */
+            background: rgba(231, 76, 60, 0.2);
+            border-radius: 50%;
+            position: absolute;
+            transform: translate(-50%, -50%);
+            z-index: 10;
+            transition: top 0.1s, left 0.1s; /* Suavizado movimiento JS */
+            box-shadow: 0 0 10px rgba(0,0,0,0.2);
+        }
+        .km-point {
+            width: 12px; height: 12px;
+            background: #bdc3c7;
+            border-radius: 50%;
+            position: absolute;
+            transition: background 0.3s;
+        }
+
+        /* 2. JERÁRQUICO (CANVAS) */
+        .card-hc { border-color: var(--hierarchical-color); }
+        .card-hc h2 { color: var(--hierarchical-color); }
+        .tag-hc { background: var(--hierarchical-color); }
+        .btn-hc, .prog-hc { background: var(--hierarchical-color); }
+
+        /* 3. DBSCAN */
+        .card-db { border-color: var(--dbscan-color); }
+        .card-db h2 { color: var(--dbscan-color); }
+        .tag-db { background: var(--dbscan-color); }
+        .btn-db, .prog-db { background: var(--dbscan-color); }
+
+        .db-radar {
+            border: 2px dashed var(--dbscan-color);
+            background: rgba(230, 126, 34, 0.1);
+            border-radius: 50%;
+            position: absolute;
+            top: 50%; left: 50%;
+            transform: translate(-50%, -50%) scale(0);
+            width: 250px; height: 250px;
+            opacity: 0.8;
+        }
+        .db-point {
+            width: 12px; height: 12px;
+            background: #bdc3c7;
+            border-radius: 50%;
+            position: absolute;
+            transition: background 0.2s, transform 0.2s;
+        }
+        .db-noise { background: #2c3e50 !important; }
+
+        /* --- TABLA COMPARATIVA --- */
+        .table-container {
+            width: 100%;
+            max-width: 1000px;
+            overflow-x: auto;
+            border-radius: 15px;
+            box-shadow: 0 5px 20px rgba(0,0,0,0.05);
+        }
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            background: white;
+            min-width: 600px;
+        }
+        th, td {
+            padding: 20px;
+            text-align: left;
+            border-bottom: 1px solid #eee;
+        }
+        th {
+            background-color: #34495e;
+            color: white;
+            font-weight: 600;
+            text-transform: uppercase;
+            font-size: 0.85rem;
+        }
+        tr:last-child td { border-bottom: none; }
+        
+        .check { color: #2ecc71; font-weight: bold; }
+        .cross { color: #e74c3c; font-weight: bold; }
+
+    </style>
+</head>
+<body>
+
+    <header>
+        <h1>Modelos de Clustering</h1>
+        <p class="subtitle">Visualización interactiva para entender la lógica de los algoritmos.</p>
+        <div class="instruction">👆 MANTÉN PRESIONADO EL BOTÓN DE CADA TARJETA</div>
+    </header>
+
+    <div class="container">
+        
+        <div class="card card-km">
+            <h2>K-Medias <span class="tag tag-km">Iterativo</span></h2>
+            
+            <div class="visual-demo" id="demo-km">
+                <div class="km-point p1" style="top: 25%; left: 20%;"></div>
+                <div class="km-point p2" style="top: 35%; left: 30%;"></div>
+                <div class="km-point p3" style="bottom: 25%; right: 20%;"></div>
+                <div class="km-point p4" style="bottom: 35%; right: 30%;"></div>
+                <div class="km-centroid c1" style="top: 50%; left: 50%;"></div>
+                <div class="km-centroid c2" style="top: 50%; left: 50%; border-color: #3498db; background: rgba(52, 152, 219, 0.2);"></div>
+            </div>
+
+            <div class="control-area">
+                <div class="progress-bg"><div class="progress-fill prog-km" id="fill-km"></div></div>
+                <button class="action-btn btn-km" onmousedown="start('km')" onmouseup="stop('km')" ontouchstart="start('km')" ontouchend="stop('km')">AGRUPAR POR DISTANCIA</button>
+            </div>
+
+            <div class="info-content">
+                <p><strong>Lógica:</strong> El algoritmo mueve los centros (🔴🔵) iterativamente para minimizar la distancia con sus puntos asignados.</p>
+                <div class="verdict">✨ Mejor para: Grupos redondos y separados</div>
+            </div>
+        </div>
+
+        <div class="card card-hc">
+            <h2>Jerárquico <span class="tag tag-hc">Recursivo</span></h2>
+            
+            <div class="visual-demo">
+                <canvas id="hcCanvas" width="300" height="220"></canvas>
+            </div>
+
+            <div class="control-area">
+                <div class="progress-bg"><div class="progress-fill prog-hc" id="fill-hc"></div></div>
+                <button class="action-btn btn-hc" onmousedown="start('hc')" onmouseup="stop('hc')" ontouchstart="start('hc')" ontouchend="stop('hc')">FUSIONAR PAREJAS</button>
+            </div>
+
+            <div class="info-content">
+                <p><strong>Lógica:</strong> Calcula distancias reales y une los puntos más cercanos paso a paso (Bottom-Up), creando un árbol.</p>
+                <div class="verdict">✨ Mejor para: Ver la estructura (Taxonomía)</div>
+            </div>
+        </div>
+
+        <div class="card card-db">
+            <h2>DBSCAN <span class="tag tag-db">Densidad</span></h2>
+            
+            <div class="visual-demo" id="demo-db">
+                <div class="db-radar" id="radar"></div>
+                <div class="db-point dp" style="top: 50%; left: 45%;"></div>
+                <div class="db-point dp" style="top: 45%; left: 52%;"></div>
+                <div class="db-point dp" style="top: 55%; left: 50%;"></div>
+                <div class="db-point dn" style="top: 20%; left: 80%;"></div>
+                <div class="db-point dn" style="top: 80%; left: 20%;"></div>
+            </div>
+
+            <div class="control-area">
+                <div class="progress-bg"><div class="progress-fill prog-db" id="fill-db"></div></div>
+                <button class="action-btn btn-db" onmousedown="start('db')" onmouseup="stop('db')" ontouchstart="start('db')" ontouchend="stop('db')">ESCANEAR DENSIDAD</button>
+            </div>
+
+            <div class="info-content">
+                <p><strong>Lógica:</strong> Un radar busca vecinos. Si encuentra pocos, marca el punto como "Ruido" (⚫) y lo ignora.</p>
+                <div class="verdict">✨ Mejor para: Limpieza de datos y formas raras</div>
+            </div>
+        </div>
+
+    </div>
+
+    <div class="table-container">
+        <table>
+            <thead>
+                <tr>
+                    <th>Característica</th>
+                    <th>K-Medias</th>
+                    <th>Jerárquico</th>
+                    <th>DBSCAN</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr>
+                    <td><strong>¿Cómo agrupa?</strong></td>
+                    <td>Distancia al centro</td>
+                    <td>Unión de parejas</td>
+                    <td>Densidad de zona</td>
+                </tr>
+                <tr>
+                    <td><strong>Parámetro Clave</strong></td>
+                    <td>K (Cantidad de grupos)</td>
+                    <td>Punto de corte</td>
+                    <td>Radio (Epsilon)</td>
+                </tr>
+                <tr>
+                    <td><strong>Manejo de Ruido</strong></td>
+                    <td><span class="cross">Malo</span> (Fuerza unión)</td>
+                    <td>Regular</td>
+                    <td><span class="check">Excelente</span> (Lo aísla)</td>
+                </tr>
+            </tbody>
+        </table>
+    </div>
+
+    <script>
+        /* =========================================
+           MOTOR DE SIMULACIÓN
+        ========================================= */
+        
+        // Estado Global
+        const state = {
+            km: { val: 0, active: false },
+            hc: { val: 0, active: false },
+            db: { val: 0, active: false }
+        };
+
+        // --- LÓGICA JERÁRQUICA (CANVAS RECURSIVO) ---
+        const canvas = document.getElementById('hcCanvas');
+        const ctx = canvas.getContext('2d');
+        
+        // Datos fijos para el Canvas (Grupos visualmente claros)
+        const hcPoints = [
+            {x: 80, y: 160}, {x: 100, y: 140}, {x: 90, y: 170}, // Grupo Izquierda
+            {x: 220, y: 160}, {x: 240, y: 140},                 // Grupo Derecha
+            {x: 150, y: 60}                                     // Punto aislado (se une al final)
+        ];
+        
+        let mergeHistory = [];
+
+        // Algoritmo Real de Clustering Aglomerativo (Pre-calculado)
+        function preCalculateMerges() {
+            let clusters = hcPoints.map((p, i) => [i]); // Inicio: Cada punto es un cluster
+            let steps = [];
+            
+            // Guardar estado inicial
+            steps.push(JSON.parse(JSON.stringify(clusters)));
+
+            while(clusters.length > 1) {
+                let minDist = Infinity;
+                let mergeA = -1, mergeB = -1;
+
+                // Buscar par más cercano
+                for(let i=0; i<clusters.length; i++) {
+                    for(let j=i+1; j<clusters.length; j++) {
+                        // Calcular centroide A
+                        let cx1=0, cy1=0;
+                        clusters[i].forEach(idx => { cx1 += hcPoints[idx].x; cy1 += hcPoints[idx].y; });
+                        cx1 /= clusters[i].length; cy1 /= clusters[i].length;
+
+                        // Calcular centroide B
+                        let cx2=0, cy2=0;
+                        clusters[j].forEach(idx => { cx2 += hcPoints[idx].x; cy2 += hcPoints[idx].y; });
+                        cx2 /= clusters[j].length; cy2 /= clusters[j].length;
+
+                        // Distancia Euclidiana
+                        let dist = Math.sqrt((cx1-cx2)**2 + (cy1-cy2)**2);
+                        if(dist < minDist) {
+                            minDist = dist;
+                            mergeA = i;
+                            mergeB = j;
+                        }
+                    }
+                }
+
+                // Fusionar
+                clusters[mergeA] = clusters[mergeA].concat(clusters[mergeB]);
+                clusters.splice(mergeB, 1);
+                
+                // Guardar foto del paso
+                steps.push(JSON.parse(JSON.stringify(clusters)));
+            }
+            return steps;
+        }
+
+        // Inicializar cálculo
+        mergeHistory = preCalculateMerges();
+
+        // Función de Dibujo en Canvas
+        function drawHierarchical(progress) {
+            // Limpiar canvas
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+            
+            // Calcular paso actual basado en progreso (0-100)
+            let totalSteps = mergeHistory.length;
+            let currentStepIdx = Math.floor((progress / 100) * (totalSteps - 1));
+            if (currentStepIdx < 0) currentStepIdx = 0;
+            
+            let clustersToDraw = mergeHistory[currentStepIdx];
+            const colors = ['#e74c3c', '#3498db', '#9b59b6', '#2ecc71', '#f1c40f', '#34495e'];
+
+            clustersToDraw.forEach((cluster, idx) => {
+                const color = colors[idx % colors.length];
+                
+                // Calcular centroide del grupo actual
+                let cx=0, cy=0;
+                cluster.forEach(ptIdx => { cx += hcPoints[ptIdx].x; cy += hcPoints[ptIdx].y; });
+                cx /= cluster.length; cy /= cluster.length;
+
+                // Dibujar líneas conectoras al centroide
+                ctx.beginPath();
+                ctx.strokeStyle = color;
+                ctx.lineWidth = 2;
+                cluster.forEach(ptIdx => {
+                    ctx.moveTo(cx, cy);
+                    ctx.lineTo(hcPoints[ptIdx].x, hcPoints[ptIdx].y);
+                });
+                ctx.stroke();
+
+                // Dibujar Puntos
+                cluster.forEach(ptIdx => {
+                    ctx.beginPath();
+                    ctx.arc(hcPoints[ptIdx].x, hcPoints[ptIdx].y, 7, 0, Math.PI*2);
+                    ctx.fillStyle = color;
+                    ctx.fill();
+                    ctx.strokeStyle = '#fff';
+                    ctx.lineWidth = 2;
+                    ctx.stroke();
+                });
+            });
+        }
+
+        // --- BUCLE DE ANIMACIÓN PRINCIPAL ---
+        function loop() {
+            Object.keys(state).forEach(key => {
+                const s = state[key];
+                
+                // Lógica de avance/rebote
+                if (s.active) {
+                    s.val += 1.2; // Velocidad de avance
+                    if (s.val > 100) s.val = 100;
+                } else {
+                    s.val -= 3.0; // Velocidad de retroceso
+                    if (s.val < 0) s.val = 0;
+                }
+
+                // Actualizar barra de progreso
+                const fill = document.getElementById(`fill-${key}`);
+                if(fill) fill.style.width = `${s.val}%`;
+
+                // RENDERIZADO POR MODELO
+                
+                // 1. JERÁRQUICO (Canvas)
+                if (key === 'hc') {
+                    drawHierarchical(s.val);
+                } 
+                
+                // 2. K-MEDIAS (CSS Interpolation)
+                else if (key === 'km') {
+                    const c1 = document.querySelector('.c1'); // Centro Rojo
+                    const c2 = document.querySelector('.c2'); // Centro Azul
+                    const pts = document.querySelectorAll('.km-point');
+                    
+                    // Movimiento Centroide Rojo (Hacia arriba-izq)
+                    c1.style.top = `${50 - (s.val * 0.25)}%`; 
+                    c1.style.left = `${50 - (s.val * 0.30)}%`;
+                    
+                    // Movimiento Centroide Azul (Hacia abajo-der)
+                    c2.style.top = `${50 + (s.val * 0.15)}%`; 
+                    c2.style.left = `${50 + (s.val * 0.20)}%`;
+
+                    // Coloreo de puntos (Decisión final > 75%)
+                    if (s.val > 75) {
+                        pts[0].style.background = '#e74c3c'; pts[1].style.background = '#e74c3c'; // Grupo Rojo
+                        pts[2].style.background = '#3498db'; pts[3].style.background = '#3498db'; // Grupo Azul
+                    } else {
+                        pts.forEach(pt => pt.style.background = '#bdc3c7');
+                    }
+                }
+                
+                // 3. DBSCAN (CSS Scale)
+                else if (key === 'db') {
+                    const radar = document.getElementById('radar');
+                    const pts = document.querySelectorAll('.dp'); // Puntos Densos
+                    const noise = document.querySelectorAll('.dn'); // Ruido
+
+                    // Escala del radar (0 a 1.1)
+                    let scale = s.val / 80; 
+                    radar.style.transform = `translate(-50%, -50%) scale(${scale})`;
+
+                    // Detectar Densos (>40%)
+                    if (s.val > 40) pts.forEach(pt => pt.style.background = '#e67e22');
+                    else pts.forEach(pt => pt.style.background = '#bdc3c7');
+
+                    // Detectar Ruido (>90%)
+                    if (s.val > 90) noise.forEach(n => n.style.background = '#2c3e50'); // Se vuelve oscuro
+                    else noise.forEach(n => n.style.background = '#bdc3c7');
+                }
+            });
+
+            requestAnimationFrame(loop);
+        }
+
+        // Controladores de Eventos
+        function start(id) { state[id].active = true; }
+        function stop(id) { state[id].active = false; }
+
+        // Iniciar Motor
+        loop();
+
+    </script>
+</body>
+</html>
